@@ -58,6 +58,8 @@
 `define INST_F          7'b0001111 // Fence instructions
 `define INST_SYS        7'b1110011 // system instructions
 
+`define INST_AMO        7'b0101111 // amo instructions
+
 `define INST_FL         7'b0000111 // float load instruction
 `define INST_FS         7'b0100111 // float store  instruction
 `define INST_FMADD      7'b1000011  
@@ -83,7 +85,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 `define INST_OP_BITS    4
-`define INST_MOD_BITS   3
+`define INST_MOD_BITS   5
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -154,12 +156,24 @@
 `define INST_LSU_BITS        4
 `define INST_LSU_FMT(x)      x[2:0]
 `define INST_LSU_WSIZE(x)    x[1:0]
-`define INST_LSU_IS_FENCE(x) (3'h1 == x)
-`define INST_LSU_IS_PREFETCH(x) (3'h2 == x)
+`define INST_LSU_IS_FENCE(x) (`INST_MOD_BITS'h1 == x)
+`define INST_LSU_IS_PREFETCH(x) (`INST_MOD_BITS'h2 == x)
 
 `define INST_FENCE_BITS      1
 `define INST_FENCE_D         1'h0
 `define INST_FENCE_I         1'h1
+
+`define INST_AMO_ADD         5'h00
+`define INST_AMO_SWAP        5'h01
+`define INST_AMO_LR          5'h02
+`define INST_AMO_SC          5'h03
+`define INST_AMO_XOR         5'h04
+`define INST_AMO_OR          5'h08
+`define INST_AMO_AND         5'h0C
+`define INST_AMO_MIN         5'h10
+`define INST_AMO_MAX         5'h14
+`define INST_AMO_MINU        5'h18
+`define INST_AMO_MAXU        5'h1C
 
 `define INST_CSR_RW          2'h1
 `define INST_CSR_RS          2'h2
@@ -196,6 +210,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+`ifdef EXT_A_ENABLE
+    `define ISA_EXT_A   (1 << 0)
+`else
+    `define ISA_EXT_A   0
+`endif
+
 `ifdef EXT_M_ENABLE
     `define ISA_EXT_M   (1 << 12)
 `else
@@ -208,7 +228,7 @@
     `define ISA_EXT_F   0
 `endif
 
-`define ISA_CODE  (0 <<  0) // A - Atomic Instructions extension \
+`define ISA_CODE `ISA_EXT_A // A - Atomic Instructions extension \
                 | (0 <<  1) // B - Tentatively reserved for Bit operations extension  \
                 | (0 <<  2) // C - Compressed extension \
                 | (0 <<  3) // D - Double precsision floating-point extension \

@@ -12,7 +12,7 @@ module VX_fpu_dpi #(
     input wire [TAGW-1:0] tag_in,
     
     input wire [`INST_FPU_BITS-1:0] op_type,
-    input wire [`INST_MOD_BITS-1:0] frm,
+    input wire [`INST_FRM_BITS-1:0] frm,
 
     input wire [`NUM_THREADS-1:0][31:0]  dataa,
     input wire [`NUM_THREADS-1:0][31:0]  datab,

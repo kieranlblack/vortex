@@ -44,6 +44,7 @@ module VX_decode  #(
     wire [6:0] opcode = instr[6:0];  
     wire [1:0] func2  = instr[26:25];
     wire [2:0] func3  = instr[14:12];
+    wire [4:0] func5  = instr[31:27];
     wire [6:0] func7  = instr[31:25];
     wire [11:0] u_12  = instr[31:20]; 
 
@@ -259,6 +260,16 @@ module VX_decode  #(
             `endif
                 `USED_IREG (rs2);
             end
+        `ifdef EXT_A_ENABLE
+            `INST_AMO: begin
+                ex_type = `EX_LSU;
+                op_type = `INST_OP_BITS'(func3);
+                op_mod  = `INST_MOD_BITS'(func5);
+                `USED_IREG (rd);
+                `USED_IREG (rs1);
+                `USED_IREG (rs2);
+            end
+        `endif 
         `ifdef EXT_F_ENABLE
             `INST_FMADD,
             `INST_FMSUB,
@@ -266,7 +277,7 @@ module VX_decode  #(
             `INST_FNMADD: begin 
                 ex_type = `EX_FPU;
                 op_type = `INST_OP_BITS'(opcode[3:0]);
-                op_mod  = func3;
+                op_mod  = `INST_MOD_BITS'(func3);
                 use_rd  = 1;
                 `USED_FREG (rd);              
                 `USED_FREG (rs1);
@@ -275,7 +286,7 @@ module VX_decode  #(
             end
             `INST_FCI: begin 
                 ex_type = `EX_FPU;
-                op_mod  = func3;
+                op_mod  = `INST_MOD_BITS'(func3);
                 use_rd  = 1;                
                 case (func7)
                     7'h00, // FADD
@@ -311,7 +322,7 @@ module VX_decode  #(
                     7'h10: begin
                         // FSGNJ=0, FSGNJN=1, FSGNJX=2
                         op_type = `INST_OP_BITS'(`INST_FPU_MISC);
-                        op_mod  = {1'b0, func3[1:0]};
+                        op_mod  = `INST_MOD_BITS'(func3[1:0]);
                         `USED_FREG (rd);
                         `USED_FREG (rs1);
                         `USED_FREG (rs2);
@@ -319,7 +330,7 @@ module VX_decode  #(
                     7'h14: begin
                         // FMIN=3, FMAX=4
                         op_type = `INST_OP_BITS'(`INST_FPU_MISC);
-                        op_mod  = func3[0] ? 4 : 3;
+                        op_mod  = `INST_MOD_BITS'(func3[0] ? 4 : 3);
                         `USED_FREG (rd);
                         `USED_FREG (rs1);
                         `USED_FREG (rs2);

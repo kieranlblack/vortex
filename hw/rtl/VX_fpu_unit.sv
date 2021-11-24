@@ -62,7 +62,7 @@ module VX_fpu_unit #(
 
     // resolve dynamic FRM from CSR   
     assign fpu_to_csr_if.read_wid = fpu_req_if.wid;
-    wire [`INST_FRM_BITS-1:0] fpu_frm = (fpu_req_if.op_mod == `INST_FRM_DYN) ? fpu_to_csr_if.read_frm : fpu_req_if.op_mod;
+    wire [`INST_FRM_BITS-1:0] fpu_frm = (`INST_FRM_BITS'(fpu_req_if.op_mod) == `INST_FRM_DYN) ? fpu_to_csr_if.read_frm : `INST_FRM_BITS'(fpu_req_if.op_mod);
 
 `ifdef FPU_DPI
 

@@ -69,6 +69,10 @@
 `define SMEM_BASE_ADDR `IO_BASE_ADDR
 `endif
 
+`ifndef EXT_A_DISABLE
+`define EXT_A_ENABLE
+`endif
+
 `ifndef EXT_M_DISABLE
 `define EXT_M_ENABLE
 `endif

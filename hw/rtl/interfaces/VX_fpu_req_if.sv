@@ -18,6 +18,8 @@ interface VX_fpu_req_if ();
     wire                    wb;        
     wire                    ready;
 
+    `UNUSED_VAR(op_mod)
+
     modport master (
         output valid,
         output wid,
