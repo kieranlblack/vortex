@@ -46,7 +46,9 @@ module VX_cache #(
     // enable bypass for non-cacheable addresses
     parameter NC_ENABLE                     = 0,
 
-    parameter WORD_SELECT_BITS              = `UP(`WORD_SELECT_BITS)
+    parameter WORD_SELECT_BITS              = `UP(`WORD_SELECT_BITS),
+
+    parameter AMO_ENABLE                    = 0
  ) (
     `SCOPE_IO_VX_cache    
     
@@ -61,6 +63,8 @@ module VX_cache #(
     // Core request    
     input wire [NUM_REQS-1:0]                       core_req_valid,
     input wire [NUM_REQS-1:0]                       core_req_rw,
+    input wire [NUM_REQS-1:0][`INST_MOD_BITS-1:0]   core_req_op_mod,
+    input wire [NUM_REQS-1:0]                       core_req_is_amo,
     input wire [NUM_REQS-1:0][`WORD_ADDR_WIDTH-1:0] core_req_addr,
     input wire [NUM_REQS-1:0][WORD_SIZE-1:0]        core_req_byteen,
     input wire [NUM_REQS-1:0][`WORD_WIDTH-1:0]      core_req_data,
@@ -221,6 +225,8 @@ module VX_cache #(
     // Core request    
     wire [NUM_REQS-1:0]                     core_req_valid_nc;
     wire [NUM_REQS-1:0]                     core_req_rw_nc;
+    wire [NUM_REQS-1:0][`INST_MOD_BITS-1:0] core_req_op_mod_nc;
+    wire [NUM_REQS-1:0]                     core_req_is_amo_nc;
     wire [NUM_REQS-1:0][`WORD_ADDR_WIDTH-1:0] core_req_addr_nc;
     wire [NUM_REQS-1:0][WORD_SIZE-1:0]      core_req_byteen_nc;
     wire [NUM_REQS-1:0][`WORD_WIDTH-1:0]    core_req_data_nc;
@@ -273,6 +279,8 @@ module VX_cache #(
             // Core request in
             .core_req_valid_in  (core_req_valid),
             .core_req_rw_in     (core_req_rw),
+            .core_req_op_mod_in (core_req_op_mod),
+            .core_req_is_amo_in (core_req_is_amo),
             .core_req_byteen_in (core_req_byteen),
             .core_req_addr_in   (core_req_addr),
             .core_req_data_in   (core_req_data),        
@@ -282,6 +290,8 @@ module VX_cache #(
             // Core request out
             .core_req_valid_out (core_req_valid_nc),
             .core_req_rw_out    (core_req_rw_nc),
+            .core_req_op_mod_out(core_req_op_mod_nc),
+            .core_req_is_amo_out(core_req_is_amo_nc),
             .core_req_byteen_out(core_req_byteen_nc),
             .core_req_addr_out  (core_req_addr_nc),
             .core_req_data_out  (core_req_data_nc),        
@@ -339,6 +349,8 @@ module VX_cache #(
     end else begin        
         assign core_req_valid_nc    = core_req_valid;
         assign core_req_rw_nc       = core_req_rw;
+        assign core_req_op_mod_nc   = core_req_op_mod;
+        assign core_req_is_amo_nc   = core_req_is_amo;
         assign core_req_addr_nc     = core_req_addr;
         assign core_req_byteen_nc   = core_req_byteen;
         assign core_req_data_nc     = core_req_data;
@@ -421,6 +433,8 @@ module VX_cache #(
     wire [NUM_BANKS-1:0][NUM_PORTS-1:0][`REQS_BITS-1:0] per_bank_core_req_tid;
     wire [NUM_BANKS-1:0][NUM_PORTS-1:0][CORE_TAG_X_WIDTH-1:0] per_bank_core_req_tag;
     wire [NUM_BANKS-1:0]                        per_bank_core_req_rw;  
+    wire [NUM_BANKS-1:0][`INST_MOD_BITS-1:0]    per_bank_core_req_op_mod;
+    wire [NUM_BANKS-1:0]                        per_bank_core_req_is_amo;
     wire [NUM_BANKS-1:0][`LINE_ADDR_WIDTH-1:0]  per_bank_core_req_addr;    
     wire [NUM_BANKS-1:0]                        per_bank_core_req_ready;
     
@@ -466,6 +480,8 @@ module VX_cache #(
     `endif     
         .core_req_valid          (core_req_valid_nc),
         .core_req_rw             (core_req_rw_nc), 
+        .core_req_op_mod         (core_req_op_mod_nc), 
+        .core_req_is_amo         (core_req_is_amo_nc), 
         .core_req_addr           (core_req_addr_nc),
         .core_req_byteen         (core_req_byteen_nc),
         .core_req_data           (core_req_data_nc),
@@ -474,6 +490,8 @@ module VX_cache #(
         .per_bank_core_req_valid (per_bank_core_req_valid),
         .per_bank_core_req_pmask (per_bank_core_req_pmask),
         .per_bank_core_req_rw    (per_bank_core_req_rw),
+        .per_bank_core_req_op_mod(per_bank_core_req_op_mod),
+        .per_bank_core_req_is_amo(per_bank_core_req_is_amo),
         .per_bank_core_req_addr  (per_bank_core_req_addr),
         .per_bank_core_req_wsel  (per_bank_core_req_wsel),
         .per_bank_core_req_byteen(per_bank_core_req_byteen),
@@ -484,7 +502,8 @@ module VX_cache #(
     );
 
     ///////////////////////////////////////////////////////////////////////////
-    
+    `STATIC_ASSERT(0, ("create alu to compute correct amo op"));
+    `STATIC_ASSERT(0, ("magically generate store operation and hold valid line low"));
     for (genvar i = 0; i < NUM_BANKS; i++) begin
         wire                        curr_bank_core_req_valid;
         wire [NUM_PORTS-1:0]        curr_bank_core_req_pmask;
@@ -494,6 +513,8 @@ module VX_cache #(
         wire [NUM_PORTS-1:0][`REQS_BITS-1:0] curr_bank_core_req_tid;
         wire [NUM_PORTS-1:0][CORE_TAG_X_WIDTH-1:0] curr_bank_core_req_tag;
         wire                        curr_bank_core_req_rw;  
+        wire [`INST_MOD_BITS-1:0]   curr_bank_core_req_op_mod;
+        wire                        curr_bank_core_req_is_amo;
         wire [`LINE_ADDR_WIDTH-1:0] curr_bank_core_req_addr;        
         wire                        curr_bank_core_req_ready;
 
@@ -519,11 +540,15 @@ module VX_cache #(
         wire [`CACHE_LINE_WIDTH-1:0] curr_bank_mem_rsp_data;
         wire                        curr_bank_mem_rsp_ready;
 
+        reg [1:0]                   curr_bank_amo_state = 0;
+
         // Core Req
         assign curr_bank_core_req_valid   = per_bank_core_req_valid[i];
         assign curr_bank_core_req_pmask   = per_bank_core_req_pmask[i];
         assign curr_bank_core_req_addr    = per_bank_core_req_addr[i];
         assign curr_bank_core_req_rw      = per_bank_core_req_rw[i];
+        assign curr_bank_core_req_op_mod  = per_bank_core_req_op_mod[i];
+        assign curr_bank_core_req_is_amo  = per_bank_core_req_is_amo[i];
         assign curr_bank_core_req_wsel    = per_bank_core_req_wsel[i];
         assign curr_bank_core_req_byteen  = per_bank_core_req_byteen[i];
         assign curr_bank_core_req_data    = per_bank_core_req_data[i];
@@ -565,7 +590,26 @@ module VX_cache #(
         assign per_bank_mem_rsp_ready[i] = curr_bank_mem_rsp_ready;
 
         `RESET_RELAY (bank_reset);
-        
+        /* 0x0 = LD_DATA
+         * 0x1 = ST_DATA
+         * 0x2 = 
+         */
+        `UNUSED_VAR(curr_bank_core_req_op_mod)
+        always @(posedge clk) begin
+            if (AMO_ENABLE) begin
+                case (curr_bank_amo_state)
+                2'h0:
+                    if (curr_bank_core_req_is_amo && curr_bank_core_rsp_tag == curr_bank_core_req_tag) begin
+                        curr_bank_amo_state <= 2'h1;
+                    end
+                2'h1:
+                    if (curr_bank_core_rsp_tag == curr_bank_core_req_tag)
+                        curr_bank_amo_state <= 2'h0;
+                default:;
+                endcase
+            end
+        end
+
         VX_bank #(                
             .BANK_ID            (i),
             .CACHE_ID           (CACHE_ID),

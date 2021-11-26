@@ -11,6 +11,8 @@ interface VX_dcache_req_if #(
 
     wire [NUM_REQS-1:0]                         valid;
     wire [NUM_REQS-1:0]                         rw;
+    wire [NUM_REQS-1:0][`INST_MOD_BITS-1:0]     op_mod;
+    wire [NUM_REQS-1:0]                         is_amo;
     wire [NUM_REQS-1:0][WORD_SIZE-1:0]          byteen;
     wire [NUM_REQS-1:0][`WORD_ADDR_WIDTH-1:0]   addr;
     wire [NUM_REQS-1:0][`WORD_WIDTH-1:0]        data;
@@ -20,6 +22,8 @@ interface VX_dcache_req_if #(
     modport master (
         output valid,
         output rw,
+        output op_mod,
+        output is_amo,
         output byteen,
         output addr,
         output data,        
@@ -30,6 +34,8 @@ interface VX_dcache_req_if #(
     modport slave (
         input  valid,
         input  rw,
+        input  op_mod,
+        input  is_amo,
         input  byteen,
         input  addr,
         input  data,

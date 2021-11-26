@@ -10,6 +10,8 @@ interface VX_lsu_req_if ();
     wire [`NUM_THREADS-1:0]         tmask;    
     wire [31:0]                     PC;
     wire [`INST_LSU_BITS-1:0]       op_type;
+    wire [`INST_MOD_BITS-1:0]       op_mod;
+    wire                            is_amo;
     wire                            is_fence;
     wire [`NUM_THREADS-1:0][31:0]   store_data;
     wire [`NUM_THREADS-1:0][31:0]   base_addr;    
@@ -25,6 +27,8 @@ interface VX_lsu_req_if ();
         output tmask,
         output PC,
         output op_type,
+        output op_mod,
+        output is_amo,
         output is_fence,
         output store_data,
         output base_addr,   
@@ -41,6 +45,8 @@ interface VX_lsu_req_if ();
         input  tmask,
         input  PC,
         input  op_type,
+        input  op_mod,
+        input  is_amo,
         input  is_fence,
         input  store_data,
         input  base_addr,   

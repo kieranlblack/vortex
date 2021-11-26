@@ -92,6 +92,8 @@ module VX_mem_unit # (
         // Core request
         .core_req_valid     (icache_req_if.valid),
         .core_req_rw        (1'b0),
+        `UNUSED_PIN (core_req_op_mod),
+        `UNUSED_PIN (core_req_is_amo),
         .core_req_byteen    ('b0),
         .core_req_addr      (icache_req_if.addr),
         .core_req_data      ('x),        
@@ -142,7 +144,8 @@ module VX_mem_unit # (
         .CORE_TAG_WIDTH     (`DCACHE_CORE_TAG_WIDTH-`SM_ENABLE),
         .CORE_TAG_ID_BITS   (`DCACHE_CORE_TAG_ID_BITS-`SM_ENABLE),
         .MEM_TAG_WIDTH      (`DCACHE_MEM_TAG_WIDTH),
-        .NC_ENABLE          (1)
+        .NC_ENABLE          (1),
+        .AMO_ENABLE         (1)
     ) dcache (
         `SCOPE_BIND_VX_mem_unit_dcache
         
@@ -152,6 +155,8 @@ module VX_mem_unit # (
         // Core req
         .core_req_valid     (dcache_req_tmp_if.valid),
         .core_req_rw        (dcache_req_tmp_if.rw),
+        .core_req_op_mod    (dcache_req_tmp_if.op_mod),
+        .core_req_is_amo    (dcache_req_tmp_if.is_amo),
         .core_req_byteen    (dcache_req_tmp_if.byteen),
         .core_req_addr      (dcache_req_tmp_if.addr),
         .core_req_data      (dcache_req_tmp_if.data),        
@@ -191,6 +196,9 @@ module VX_mem_unit # (
             .WORD_SIZE (`DCACHE_WORD_SIZE), 
             .TAG_WIDTH (`DCACHE_CORE_TAG_WIDTH-`SM_ENABLE)
         ) smem_req_if();
+
+        assign smem_req_if.is_amo = 0;
+        assign smem_req_if.op_mod = 0;
 
         VX_dcache_rsp_if #(
             .NUM_REQS  (`DCACHE_NUM_REQS), 
@@ -286,15 +294,15 @@ module VX_mem_unit # (
         // core to D-cache request
         for (genvar i = 0; i < `DCACHE_NUM_REQS; ++i) begin
             VX_skid_buffer #(
-                .DATAW ((32-`CLOG2(`DCACHE_WORD_SIZE)) + 1 + `DCACHE_WORD_SIZE + (8*`DCACHE_WORD_SIZE) + `DCACHE_CORE_TAG_WIDTH)
+                .DATAW ((32-`CLOG2(`DCACHE_WORD_SIZE)) + 1 + `INST_MOD_BITS + 1 + `DCACHE_WORD_SIZE + (8*`DCACHE_WORD_SIZE) + `DCACHE_CORE_TAG_WIDTH)
             ) req_buf (
                 .clk       (clk),
                 .reset     (reset),
                 .valid_in  (dcache_req_if.valid[i]),        
-                .data_in   ({dcache_req_if.addr[i], dcache_req_if.rw[i], dcache_req_if.byteen[i], dcache_req_if.data[i], dcache_req_if.tag[i]}),
+                .data_in   ({dcache_req_if.addr[i], dcache_req_if.rw[i], dcache_req_if.op_mod[i], dcache_req_if.is_amo[i], dcache_req_if.byteen[i], dcache_req_if.data[i], dcache_req_if.tag[i]}),
                 .ready_in  (dcache_req_if.ready[i]),
                 .valid_out (dcache_req_tmp_if.valid[i]),
-                .data_out  ({dcache_req_tmp_if.addr[i], dcache_req_tmp_if.rw[i], dcache_req_tmp_if.byteen[i], dcache_req_tmp_if.data[i], dcache_req_tmp_if.tag[i]}),
+                .data_out  ({dcache_req_tmp_if.addr[i], dcache_req_tmp_if.rw[i], dcache_req_tmp_if.op_mod[i], dcache_req_tmp_if.is_amo[i], dcache_req_tmp_if.byteen[i], dcache_req_tmp_if.data[i], dcache_req_tmp_if.tag[i]}),
                 .ready_out (dcache_req_tmp_if.ready[i])
             );
         end

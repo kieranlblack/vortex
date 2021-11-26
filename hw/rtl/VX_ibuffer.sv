@@ -15,7 +15,7 @@ module VX_ibuffer #(
 
     `UNUSED_PARAM (CORE_ID)
     
-    localparam DATAW   = `NUM_THREADS + 32 + `EX_BITS + `INST_OP_BITS + `INST_MOD_BITS + 1 + (`NR_BITS * 4) + 32 + 1 + 1;
+    localparam DATAW   = `NUM_THREADS + 32 + `EX_BITS + `INST_OP_BITS + `INST_MOD_BITS + 1 + (`NR_BITS * 4) + 32 + 1 + 1 + 1;
     localparam ADDRW   = $clog2(`IBUF_SIZE+1);
     localparam NWARPSW = $clog2(`NUM_WARPS+1);
 
@@ -177,6 +177,7 @@ module VX_ibuffer #(
                         decode_if.use_PC,
                         decode_if.use_imm,
                         decode_if.imm,
+                        decode_if.is_amo,
                         decode_if.rd, 
                         decode_if.rs1, 
                         decode_if.rs2, 
@@ -193,6 +194,7 @@ module VX_ibuffer #(
             ibuffer_if.use_PC,
             ibuffer_if.use_imm,
             ibuffer_if.imm,
+            ibuffer_if.is_amo,
             ibuffer_if.rd, 
             ibuffer_if.rs1, 
             ibuffer_if.rs2, 

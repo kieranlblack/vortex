@@ -69,6 +69,7 @@ module VX_issue #(
     assign dispatch_if.imm      = ibuffer_if.imm;        
     assign dispatch_if.use_PC   = ibuffer_if.use_PC;
     assign dispatch_if.use_imm  = ibuffer_if.use_imm;
+    assign dispatch_if.is_amo   = ibuffer_if.is_amo;
 
     // issue the instruction
     assign ibuffer_if.ready = scoreboard_if.ready && dispatch_if.ready;
@@ -219,8 +220,8 @@ module VX_issue #(
             dpi_trace("\n");
         end
         if (lsu_req_if.valid && lsu_req_if.ready) begin
-            dpi_trace("%d: core%0d-issue: wid=%0d, PC=%0h, ex=LSU, tmask=%b, rd=%0d, offset=%0h, addr=", 
-                $time, CORE_ID, lsu_req_if.wid, lsu_req_if.PC, lsu_req_if.tmask, lsu_req_if.rd, lsu_req_if.offset); 
+            dpi_trace("%d: core%0d-issue: wid=%0d, PC=%0h, ex=LSU, tmask=%b, rd=%0d, op_mod=%0h, is_amo=%b, offset=%0h, addr=", 
+                $time, CORE_ID, lsu_req_if.wid, lsu_req_if.PC, lsu_req_if.tmask, lsu_req_if.rd, lsu_req_if.op_mod, lsu_req_if.is_amo, lsu_req_if.offset); 
             `TRACE_ARRAY1D(lsu_req_if.base_addr, `NUM_THREADS);
             dpi_trace(", data=");
             `TRACE_ARRAY1D(lsu_req_if.store_data, `NUM_THREADS);

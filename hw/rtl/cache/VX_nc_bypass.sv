@@ -26,6 +26,8 @@ module VX_nc_bypass #(
     // Core request in   
     input wire [NUM_REQS-1:0]                       core_req_valid_in,
     input wire [NUM_REQS-1:0]                       core_req_rw_in,
+    input wire [NUM_REQS-1:0][`INST_MOD_BITS-1:0]   core_req_op_mod_in,
+    input wire [NUM_REQS-1:0]                       core_req_is_amo_in,
     input wire [NUM_REQS-1:0][CORE_ADDR_WIDTH-1:0]  core_req_addr_in,
     input wire [NUM_REQS-1:0][CORE_DATA_SIZE-1:0]   core_req_byteen_in,
     input wire [NUM_REQS-1:0][CORE_DATA_WIDTH-1:0]  core_req_data_in,
@@ -35,6 +37,8 @@ module VX_nc_bypass #(
     // Core request out
     output wire [NUM_REQS-1:0]                      core_req_valid_out,
     output wire [NUM_REQS-1:0]                      core_req_rw_out,
+    output wire [NUM_REQS-1:0][`INST_MOD_BITS-1:0]  core_req_op_mod_out,
+    output wire [NUM_REQS-1:0]                      core_req_is_amo_out,
     output wire [NUM_REQS-1:0][CORE_ADDR_WIDTH-1:0] core_req_addr_out,
     output wire [NUM_REQS-1:0][CORE_DATA_SIZE-1:0]  core_req_byteen_out,
     output wire [NUM_REQS-1:0][CORE_DATA_WIDTH-1:0] core_req_data_out,
@@ -127,6 +131,8 @@ module VX_nc_bypass #(
 
     assign core_req_valid_out  = core_req_valid_in & ~core_req_nc_tids;
     assign core_req_rw_out     = core_req_rw_in;
+    assign core_req_op_mod_out = core_req_op_mod_in;
+    assign core_req_is_amo_out = core_req_is_amo_in;
     assign core_req_addr_out   = core_req_addr_in;
     assign core_req_byteen_out = core_req_byteen_in;
     assign core_req_data_out   = core_req_data_in;

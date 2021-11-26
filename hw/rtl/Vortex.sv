@@ -111,6 +111,8 @@ module Vortex (
             // Core request    
             .core_req_valid     (per_cluster_mem_req_valid),
             .core_req_rw        (per_cluster_mem_req_rw),
+            `UNUSED_PIN (core_req_op_mod),
+            `UNUSED_PIN (core_req_is_amo),
             .core_req_byteen    (per_cluster_mem_req_byteen),
             .core_req_addr      (per_cluster_mem_req_addr),
             .core_req_data      (per_cluster_mem_req_data),

@@ -16,6 +16,7 @@ interface VX_decode_if ();
     wire                    use_PC;
     wire                    use_imm;
     wire [31:0]             imm;
+    wire                    is_amo;
     wire [`NR_BITS-1:0]     rd;
     wire [`NR_BITS-1:0]     rs1;
     wire [`NR_BITS-1:0]     rs2;
@@ -34,6 +35,7 @@ interface VX_decode_if ();
         output use_PC,
         output use_imm,
         output imm,
+        output is_amo,
         output rd,
         output rs1,
         output rs2,
@@ -53,6 +55,7 @@ interface VX_decode_if ();
         input  use_PC,
         input  use_imm,
         input  imm,
+        input  is_amo,
         input  rd,
         input  rs1,
         input  rs2,

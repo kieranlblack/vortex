@@ -12,6 +12,8 @@ module VX_pipeline #(
     // Dcache core request
     output wire [`NUM_THREADS-1:0]          dcache_req_valid,
     output wire [`NUM_THREADS-1:0]          dcache_req_rw,
+    output wire [`NUM_THREADS-1:0][`INST_MOD_BITS-1:0] dcache_req_op_mod,
+    output wire [`NUM_THREADS-1:0]          dcache_req_is_amo,
     output wire [`NUM_THREADS-1:0][3:0]     dcache_req_byteen,
     output wire [`NUM_THREADS-1:0][29:0]    dcache_req_addr,
     output wire [`NUM_THREADS-1:0][31:0]    dcache_req_data,
@@ -56,6 +58,8 @@ module VX_pipeline #(
 
     assign dcache_req_valid  = dcache_req_if.valid;
     assign dcache_req_rw     = dcache_req_if.rw;
+    assign dcache_req_op_mod = dcache_req_if.op_mod;
+    assign dcache_req_is_amo = dcache_req_if.is_amo;
     assign dcache_req_byteen = dcache_req_if.byteen;
     assign dcache_req_addr   = dcache_req_if.addr;
     assign dcache_req_data   = dcache_req_if.data;

@@ -83,6 +83,8 @@ module VX_shared_mem #(
     `endif     
         .core_req_valid          (core_req_valid),
         .core_req_rw             (core_req_rw),
+        `UNUSED_PIN (core_req_op_mod),
+        `UNUSED_PIN (core_req_is_amo),
         .core_req_addr           (core_req_addr),
         .core_req_byteen         (core_req_byteen),
         .core_req_data           (core_req_data),
@@ -97,7 +99,9 @@ module VX_shared_mem #(
         .per_bank_core_req_data  (per_bank_core_req_data_unqual),
         .per_bank_core_req_ready (per_bank_core_req_ready_unqual),
         `UNUSED_PIN (per_bank_core_req_pmask),
-        `UNUSED_PIN (per_bank_core_req_wsel)
+        `UNUSED_PIN (per_bank_core_req_wsel),
+        `UNUSED_PIN (per_bank_core_req_op_mod),
+        `UNUSED_PIN (per_bank_core_req_is_amo)
     );
 
     wire [NUM_BANKS-1:0]                    per_bank_core_req_valid; 

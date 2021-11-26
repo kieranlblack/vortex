@@ -93,6 +93,8 @@ module VX_core #(
         // Dcache core request
         .dcache_req_valid   (dcache_req_if.valid),
         .dcache_req_rw      (dcache_req_if.rw),
+        .dcache_req_op_mod  (dcache_req_if.op_mod),
+        .dcache_req_is_amo  (dcache_req_if.is_amo),
         .dcache_req_byteen  (dcache_req_if.byteen),
         .dcache_req_addr    (dcache_req_if.addr),
         .dcache_req_data    (dcache_req_if.data),
@@ -149,8 +151,3 @@ module VX_core #(
     );
     
 endmodule
-
-
-
-
-

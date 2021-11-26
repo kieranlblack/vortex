@@ -37,6 +37,8 @@ module VX_lsu_unit #(
     wire [`NUM_THREADS-1:0][31:0] req_data;   
     wire [`NR_BITS-1:0]           req_rd;
     wire                          req_wb;
+    wire [`INST_MOD_BITS-1:0]     req_op_mod;
+    wire                          req_is_amo;
     wire [`NW_BITS-1:0]           req_wid;
     wire [31:0]                   req_pc;
     wire                          req_is_dup;
@@ -83,14 +85,14 @@ module VX_lsu_unit #(
     wire lsu_wb = lsu_req_if.wb | lsu_req_if.is_prefetch;
 
     VX_pipe_register #(
-        .DATAW  (1 + 1 + 1 + `NW_BITS + `NUM_THREADS + 32 + (`NUM_THREADS * 32) + (`NUM_THREADS * ADDR_TYPEW) + `INST_LSU_BITS + `NR_BITS + 1 + (`NUM_THREADS * 32)),
+        .DATAW  (1 + 1 + 1 + `NW_BITS + `NUM_THREADS + 32 + (`NUM_THREADS * 32) + (`NUM_THREADS * ADDR_TYPEW) + `INST_LSU_BITS + `INST_MOD_BITS + 1 + `NR_BITS + 1 + (`NUM_THREADS * 32)),
         .RESETW (1)
     ) req_pipe_reg (
         .clk      (clk),
         .reset    (reset),
         .enable   (!stall_in),
-        .data_in  ({lsu_valid, lsu_is_dup, lsu_req_if.is_prefetch, lsu_req_if.wid, lsu_req_if.tmask, lsu_req_if.PC, full_addr, lsu_addr_type, lsu_req_if.op_type, lsu_req_if.rd, lsu_wb, lsu_req_if.store_data}),
-        .data_out ({req_valid, req_is_dup, req_is_prefetch,        req_wid,        req_tmask,        req_pc,        req_addr,  req_addr_type, req_type,           req_rd,        req_wb, req_data})
+        .data_in  ({lsu_valid, lsu_is_dup, lsu_req_if.is_prefetch, lsu_req_if.wid, lsu_req_if.tmask, lsu_req_if.PC, full_addr, lsu_addr_type, lsu_req_if.op_type, lsu_req_if.op_mod, lsu_req_if.is_amo, lsu_req_if.rd, lsu_wb, lsu_req_if.store_data}),
+        .data_out ({req_valid, req_is_dup, req_is_prefetch,        req_wid,        req_tmask,        req_pc,        req_addr,  req_addr_type, req_type,           req_op_mod,        req_is_amo,        req_rd,        req_wb, req_data})
     );
 
     // Can accept new request?
@@ -232,6 +234,8 @@ module VX_lsu_unit #(
 
         assign dcache_req_if.valid[i]  = req_valid && req_dep_ready && req_tmask_dup[i] && !req_sent_mask[i];
         assign dcache_req_if.rw[i]     = ~req_wb;
+        assign dcache_req_if.op_mod[i] = req_op_mod;
+        assign dcache_req_if.is_amo[i] = req_is_amo;
         assign dcache_req_if.addr[i]   = req_addr[i][31:2];
         assign dcache_req_if.byteen[i] = mem_req_byteen;
         assign dcache_req_if.data[i]   = mem_req_data;
@@ -354,7 +358,7 @@ module VX_lsu_unit #(
                 `TRACE_ARRAY1D(dcache_req_if.data, `NUM_THREADS);
                 dpi_trace("\n");
             end else begin
-                dpi_trace("%d: D$%0d Rd Req: prefetch=%b, wid=%0d, PC=%0h, tmask=%b, addr=", $time, CORE_ID, req_is_prefetch, req_wid, req_pc, dcache_req_fire);
+                dpi_trace("%d: D$%0d Rd Req: prefetch=%b, wid=%0d, PC=%0h, tmask=%b, op_mod=%0h is_amo=%b, addr=", $time, CORE_ID, req_is_prefetch, req_wid, req_pc, dcache_req_fire, req_op_mod, req_is_amo);
                 `TRACE_ARRAY1D(req_addr, `NUM_THREADS);
                 dpi_trace(", tag=%0h, byteen=%0h, type=", req_tag, dcache_req_if.byteen);
                 `TRACE_ARRAY1D(req_addr_type, `NUM_THREADS);

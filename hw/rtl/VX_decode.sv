@@ -38,7 +38,7 @@ module VX_decode  #(
     reg [`NR_BITS-1:0]  rd_r, rs1_r, rs2_r, rs3_r;
     reg [31:0]          imm;    
     reg use_rd, use_PC, use_imm;
-    reg is_join, is_wstall;
+    reg is_join, is_wstall, is_amo;
 
     wire [31:0] instr = ifetch_rsp_if.data;
     wire [6:0] opcode = instr[6:0];  
@@ -77,6 +77,7 @@ module VX_decode  #(
         use_rd    = 0;
         is_join   = 0;
         is_wstall = 0;
+        is_amo    = 0;
 
         case (opcode)            
             `INST_I: begin
@@ -262,9 +263,11 @@ module VX_decode  #(
             end
         `ifdef EXT_A_ENABLE
             `INST_AMO: begin
+                // TODO: SC instruction will require a use_rd = 1
                 ex_type = `EX_LSU;
                 op_type = `INST_OP_BITS'(func3);
                 op_mod  = `INST_MOD_BITS'(func5);
+                is_amo  = 1;
                 `USED_IREG (rd);
                 `USED_IREG (rs1);
                 `USED_IREG (rs2);
@@ -430,6 +433,7 @@ module VX_decode  #(
     assign decode_if.imm       = imm;
     assign decode_if.use_PC    = use_PC;
     assign decode_if.use_imm   = use_imm;
+    assign decode_if.is_amo    = is_amo;
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -451,7 +455,7 @@ module VX_decode  #(
             trace_ex_type(decode_if.ex_type);
             dpi_trace(", op=");
             trace_ex_op(decode_if.ex_type, decode_if.op_type, decode_if.op_mod);
-            dpi_trace(", mod=%0d, tmask=%b, wb=%b, rd=%0d, rs1=%0d, rs2=%0d, rs3=%0d, imm=%0h, use_pc=%b, use_imm=%b\n", decode_if.op_mod, decode_if.tmask, decode_if.wb, decode_if.rd, decode_if.rs1, decode_if.rs2, decode_if.rs3, decode_if.imm, decode_if.use_PC, decode_if.use_imm);                        
+            dpi_trace(", mod=%0d, tmask=%b, wb=%b, rd=%0d, rs1=%0d, rs2=%0d, rs3=%0d, imm=%0h, use_pc=%b, use_imm=%b, is_amo=%b\n", decode_if.op_mod, decode_if.tmask, decode_if.wb, decode_if.rd, decode_if.rs1, decode_if.rs2, decode_if.rs3, decode_if.imm, decode_if.use_PC, decode_if.use_imm, decode_if.is_amo);                        
         end
     end
 `endif
