@@ -1,4 +1,4 @@
-`include "VX_cache_define.vh"
+π`include "VX_cache_define.vh"
 
 module VX_cache #(
     parameter CACHE_ID                      = 0,
@@ -600,11 +600,15 @@ module VX_cache #(
                 case (curr_bank_amo_state)
                 2'h0:
                     if (curr_bank_core_req_is_amo && curr_bank_core_rsp_tag == curr_bank_core_req_tag) begin
+                        // do alu here.
+
                         curr_bank_amo_state <= 2'h1;
                     end
                 2'h1:
                     if (curr_bank_core_rsp_tag == curr_bank_core_req_tag)
                         curr_bank_amo_state <= 2'h0;
+
+                        // rd gets the new value?
                 default:;
                 endcase
             end

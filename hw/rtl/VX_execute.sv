@@ -152,7 +152,7 @@ module VX_execute #(
     `RESET_RELAY (lsu_reset);
     `RESET_RELAY (csr_reset);
     `RESET_RELAY (gpu_reset);
-    
+
     VX_alu_unit #(
         .CORE_ID(CORE_ID)
     ) alu_unit (
