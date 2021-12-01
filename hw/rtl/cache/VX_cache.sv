@@ -551,6 +551,7 @@ module VX_cache #(
         assign curr_bank_core_req_is_amo  = per_bank_core_req_is_amo[i];
         assign curr_bank_core_req_wsel    = per_bank_core_req_wsel[i];
         assign curr_bank_core_req_byteen  = per_bank_core_req_byteen[i];
+        // alu_in2
         assign curr_bank_core_req_data    = per_bank_core_req_data[i];
         assign curr_bank_core_req_tag     = per_bank_core_req_tag[i];
         assign curr_bank_core_req_tid     = per_bank_core_req_tid[i];
@@ -562,6 +563,7 @@ module VX_cache #(
         assign per_bank_core_rsp_pmask[i] = curr_bank_core_rsp_pmask;
         assign per_bank_core_rsp_tid  [i] = curr_bank_core_rsp_tid;
         assign per_bank_core_rsp_tag  [i] = curr_bank_core_rsp_tag;
+        // alu_in1
         assign per_bank_core_rsp_data [i] = curr_bank_core_rsp_data;
 
         // Memory request            
@@ -594,7 +596,13 @@ module VX_cache #(
          * 0x1 = ST_DATA
          * 0x2 = 
          */
-        `UNUSED_VAR(curr_bank_core_req_op_mod)
+        //`UNUSED_VAR(curr_bank_core_req_op_mod)
+
+        // opcode = curr_bank_core_req_op_mod
+        // i think this is wrong?
+
+        wire [31:0] amo_alu_result;
+
         always @(posedge clk) begin
             if (AMO_ENABLE) begin
                 case (curr_bank_amo_state)
@@ -609,6 +617,19 @@ module VX_cache #(
                 endcase
             end
         end
+
+        VX_amo_alu_unit #(
+            .DATAW              (32)
+        ) amo_alu_unit (
+            .clk        (clk),
+            .reset      (reset),
+            .alu_op     (curr_bank_core_req_op_mod),
+            .alu_in1    (curr_bank_core_rsp_data[0]),
+            .alu_in2    (curr_bank_core_req_data[0]),
+            .alu_result (amo_alu_result)
+        );
+
+
 
         VX_bank #(                
             .BANK_ID            (i),
