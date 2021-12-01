@@ -1,30 +1,34 @@
 `include "VX_define.vh"
 
 module VX_amo_alu_unit #(
-    parameter CORE_ID = 0
+    // we don't care about the different cores.
+    // parameter CORE_ID = 0
+    parameter DATAW = 32
 ) (
     input wire              clk,
     input wire              reset,
     
     // Inputs
-    VX_alu_req_if.slave     alu_req_if,
-
-    // Outputs
-    VX_commit_if.master     alu_commit_if
+    //VX_amo_alu_req_if.slave     amo_alu_req_if,
+    input wire [4:0]        alu_op
+    input wire [31:0]       alu_in1;
+    input wire [31:0]       alu_in2;
+    output reg [31:0]       alu_result;
 );   
-    `UNUSED_PARAM (CORE_ID)
-    
-    wire [31:0] alu_result;
+    // `UNUSED_PARAM (CORE_ID)
+    `UNUSED_PARAM (DATAW)
+    // wire ready_in;
 
-    wire ready_in;
 
-    wire alu_op = alu_req_if.op_mod;
-    wire alu_signed = ~(alu_op == `INST_AMO_MIN && alu_op == `INST_AMO_MAX);
-
+    // removed after removing the if.
+    // wire alu_op = amo_alu_req_if.op_mod;
     // this will just be inputed.
-    wire [31:0] alu_in1 = alu_req_if.rs1_data;
+    // wire [31:0] alu_in1 = amo_alu_req_if.rs1_data;
     // this one stays the same
-    wire [31:0] alu_in2 = alu_req_if.rs2_data;
+    // wire [31:0] alu_in2 = amo_alu_req_if.rs2_data;
+
+    // i think this is wrong?
+    wire alu_signed = ~(alu_op == `INST_AMO_MIN && alu_op == `INST_AMO_MAX);
 
     wire [32:0] sub_in1 = {alu_signed & alu_in1[31], alu_in1};
     wire [32:0] sub_in2 = {alu_signed & alu_in2[31], alu_in2};
@@ -47,27 +51,25 @@ module VX_amo_alu_unit #(
         endcase    
     end
 
-    assign alu_ready_out = 1'b1;
 
     // output
-
+    // our alu is finished in 1 cycle. and it doesnt need to be sure to be ready in the future. The ready for our amo
+    // instructions is handle by the same wires that handle the ld instruction
+    /*
     wire                          alu_valid_in;
     wire                          alu_ready_in;
     wire                          alu_valid_out;
     wire                          alu_ready_out;
-    wire [`NW_BITS-1:0]           alu_wid;
-    wire [31:0]                   alu_PC;
-    wire [`NR_BITS-1:0]           alu_rd;   
-    wire                          alu_wb; 
     wire [`NUM_THREADS-1:0][31:0] alu_data;
 
+    assign alu_ready_out = 1'b1;
     assign ready_in = alu_ready_in;
-
     assign alu_valid_in = alu_req_if.valid;
 
-    // can accept new request?
-    assign alu_req_if.ready = ready_in;
+    // assign alu_req_if.ready = ready_in;
+    */
 
+/*
 `ifdef DBG_TRACE_PIPELINE
     always @(posedge clk) begin
         if (branch_ctl_if.valid) begin
@@ -76,5 +78,6 @@ module VX_amo_alu_unit #(
         end
     end
 `endif
+*/
 
 endmodule

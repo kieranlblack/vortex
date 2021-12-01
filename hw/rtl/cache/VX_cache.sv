@@ -66,6 +66,7 @@ module VX_cache #(
     input wire [NUM_REQS-1:0][`INST_MOD_BITS-1:0]   core_req_op_mod,
     input wire [NUM_REQS-1:0]                       core_req_is_amo,
     input wire [NUM_REQS-1:0][`WORD_ADDR_WIDTH-1:0] core_req_addr,
+    // input wire [NUM_REQS-1:0][`WORD_ADDR_WIDTH-1:0] core_req_rs2_,
     input wire [NUM_REQS-1:0][WORD_SIZE-1:0]        core_req_byteen,
     input wire [NUM_REQS-1:0][`WORD_WIDTH-1:0]      core_req_data,
     input wire [NUM_REQS-1:0][CORE_TAG_WIDTH-1:0]   core_req_tag,
@@ -551,6 +552,7 @@ module VX_cache #(
         assign curr_bank_core_req_is_amo  = per_bank_core_req_is_amo[i];
         assign curr_bank_core_req_wsel    = per_bank_core_req_wsel[i];
         assign curr_bank_core_req_byteen  = per_bank_core_req_byteen[i];
+        // what is the chance that this is our store value and also our rs2 value to use in amo instructions.
         assign curr_bank_core_req_data    = per_bank_core_req_data[i];
         assign curr_bank_core_req_tag     = per_bank_core_req_tag[i];
         assign curr_bank_core_req_tid     = per_bank_core_req_tid[i];
@@ -562,6 +564,8 @@ module VX_cache #(
         assign per_bank_core_rsp_pmask[i] = curr_bank_core_rsp_pmask;
         assign per_bank_core_rsp_tid  [i] = curr_bank_core_rsp_tid;
         assign per_bank_core_rsp_tag  [i] = curr_bank_core_rsp_tag;
+        // this is where ld is doing its magic. this is sent back up to the core and make its way to the lsu. Which will populate it into the correct rd.
+        // we can leave this the same as we only want to mess with the curr_bank_core_rsp_data and store it back into the mem location.
         assign per_bank_core_rsp_data [i] = curr_bank_core_rsp_data;
 
         // Memory request            
@@ -594,6 +598,12 @@ module VX_cache #(
          * 0x1 = ST_DATA
          * 0x2 = 
          */
+
+        // i swear. this would be easier if we just didnt have an amo_alu_unit and just did it all here.
+        // im worried about the clock cycles. the amo_alu_unit is outputting a reg, but it only makes sense for this one to also be a reg
+        reg [31:0]      amo_alu_result
+        wire [31:0]     temp_amo_alu_result;
+
         `UNUSED_VAR(curr_bank_core_req_op_mod)
         always @(posedge clk) begin
             if (AMO_ENABLE) begin
@@ -601,18 +611,30 @@ module VX_cache #(
                 2'h0:
                     if (curr_bank_core_req_is_amo && curr_bank_core_rsp_tag == curr_bank_core_req_tag) begin
                         // do alu here.
-
+                        // first operand = mem(rs1.data) = curr_bank_core_rsp_data
+                        // second operand = rs2.data = curr_bank_core_req_data
+                        amo_alu_result <= temp_amo_alu_result;
                         curr_bank_amo_state <= 2'h1;
                     end
                 2'h1:
                     if (curr_bank_core_rsp_tag == curr_bank_core_req_tag)
                         curr_bank_amo_state <= 2'h0;
-
+                        // if we reach this state, the value in amo_alu_result should be correct.
                         // rd gets the new value?
                 default:;
                 endcase
             end
         end
+
+
+        VX_amo_alu_unit #(
+            .DATAW              (32)
+        ) amo_alu_unit (
+            .alu_op     (curr_bank_core_req_op_mod),
+            .alu_in1    (curr_bank_core_rsp_data),
+            .alu_in2    (curr_bank_core_req_data),
+            .alu_result (temp_amo_alu_result)
+        );
 
         VX_bank #(                
             .BANK_ID            (i),
