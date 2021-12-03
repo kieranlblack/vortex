@@ -1,4 +1,4 @@
-`include "VX_cache_define.vh"
+kinclude "VX_cache_define.vh"
 
 module VX_cache #(
     parameter CACHE_ID                      = 0,
@@ -355,7 +355,7 @@ module VX_cache #(
         assign core_req_byteen_nc   = core_req_byteen;
         assign core_req_data_nc     = core_req_data;
         assign core_req_tag_nc      = core_req_tag;
-        assign core_req_ready       = core_req_ready_nc;
+        assign core_req_ready       = (is_amo_processing) ? 0 : core_req_ready_nc;
 
         assign core_rsp_valid_sb    = core_rsp_valid_nc;
         assign core_rsp_tmask_sb    = core_rsp_tmask_nc;
@@ -502,8 +502,6 @@ module VX_cache #(
     );
 
     ///////////////////////////////////////////////////////////////////////////
-    `STATIC_ASSERT(0, ("create alu to compute correct amo op"));
-    `STATIC_ASSERT(0, ("magically generate store operation and hold valid line low"));
     for (genvar i = 0; i < NUM_BANKS; i++) begin
         wire                        curr_bank_core_req_valid;
         wire [NUM_PORTS-1:0]        curr_bank_core_req_pmask;
@@ -541,21 +539,25 @@ module VX_cache #(
         wire                        curr_bank_mem_rsp_ready;
 
         reg [1:0]                   curr_bank_amo_state = 0;
-
+        
         // Core Req
-        assign curr_bank_core_req_valid   = per_bank_core_req_valid[i];
+        // curr_bank_core_req_valid     (this needs to be valid still after one cycle of it.)
+        // per_bank_core_req_rw         (comes in as read, we need to change to write)
+        // curr_bank_core_req_data (at first hold alu_in2) (then it should hold the new value to store to mem)
+        // might need to fuck with the ready?
+        assign curr_bank_core_req_valid   = (is_amo_processing) ? amo_valid : per_bank_core_req_valid[i];
         assign curr_bank_core_req_pmask   = per_bank_core_req_pmask[i];
         assign curr_bank_core_req_addr    = per_bank_core_req_addr[i];
-        assign curr_bank_core_req_rw      = per_bank_core_req_rw[i];
+        assign curr_bank_core_req_rw      = (is_amo_processing) ? amo_rw : per_bank_core_req_rw[i];
         assign curr_bank_core_req_op_mod  = per_bank_core_req_op_mod[i];
         assign curr_bank_core_req_is_amo  = per_bank_core_req_is_amo[i];
         assign curr_bank_core_req_wsel    = per_bank_core_req_wsel[i];
         assign curr_bank_core_req_byteen  = per_bank_core_req_byteen[i];
         // alu_in2
-        assign curr_bank_core_req_data    = per_bank_core_req_data[i];
+        assign curr_bank_core_req_data    = (is_amo_processing) ? amo_alu_result : per_bank_core_req_data[i];
         assign curr_bank_core_req_tag     = per_bank_core_req_tag[i];
         assign curr_bank_core_req_tid     = per_bank_core_req_tid[i];
-        assign per_bank_core_req_ready[i] = curr_bank_core_req_ready;
+        assign per_bank_core_req_ready[i] = (is_amo_processing) ? 0 : curr_bank_core_req_ready;
 
         // Core WB
         assign curr_bank_core_rsp_ready   = per_bank_core_rsp_ready[i];
@@ -592,44 +594,74 @@ module VX_cache #(
         assign per_bank_mem_rsp_ready[i] = curr_bank_mem_rsp_ready;
 
         `RESET_RELAY (bank_reset);
-        /* 0x0 = LD_DATA
-         * 0x1 = ST_DATA
-         * 0x2 = 
-         */
+        //`UNUSED_VAR(curr_bank_amo_state)
+
         //`UNUSED_VAR(curr_bank_core_req_op_mod)
+        if (AMO_ENABLE == 1) begin
+            wire [31:0] amo_alu_result;
+            reg is_amo_processing = 0;
+            reg [TODO size] amo_req_tag;
+            reg [TODO size] amo_req_data;
+            reg [TODO size] amo_load_result = 0;
+            reg amo_valid = 0;
+            reg amo_rw = 0;
+            wire is_amo_op = 0;
+            assign is_amo_op = curr_bank_core_req_is_amo;
 
-        // opcode = curr_bank_core_req_op_mod
-        // i think this is wrong?
 
-        wire [31:0] amo_alu_result;
-
-        always @(posedge clk) begin
-            if (AMO_ENABLE) begin
-                case (curr_bank_amo_state)
-                2'h0:
-                    if (curr_bank_core_req_is_amo && curr_bank_core_rsp_tag == curr_bank_core_req_tag) begin
+            // TODO: we are tyring to figure out how to stall the requests after the amo intsruction in the lsu using. We 
+            // know that the output core_req_ready will make the lsu unit start stalling. but we were looking and worrying about the 
+            // nc_bypass as it is enabled for our dcache. We still need to save the ld rsp part from the 
+            // ping on discord if you have questions about the comments ;)
+            always @(posedge clk) begin
+                if (is_amo_processing || is_amo_op) begin
+                    case (curr_bank_amo_state)
+                    2'h0: begin
+                        // on the same clock cycle this gets updated, the load is queued in the bank
+                        is_amo_processing <= 1;
+                        amo_valid <= 0;
+                        // TODO turn off the ready bit for the cache so that it doesn't receive more cache requests
+                        // TODO save amo request data in amo_req  (or in separate registers)
+                        //      things like the tag (see amo_req_tag)
+                            
                         curr_bank_amo_state <= 2'h1;
                     end
-                2'h1:
-                    if (curr_bank_core_rsp_tag == curr_bank_core_req_tag)
-                        curr_bank_amo_state <= 2'h0;
-                default:;
-                endcase
+                    2'h1: begin
+                        if (amo_req_tag == curr_bank_core_rsp_tag && curr_bank_core_req_ready == 1) begin
+                            // Create a store request
+                            // TODO set other attributes like amo_req_tag
+                            // TODO save amo result and need to save a ld response to send back. As we dont want send back a st response.
+                            amo_valid <= 1;
+                            amo_rw <= 0; // r is 1, w is 0
+                            
+                            // Move to the next state
+                            curr_bank_amo_state <= 2'h2;
+                        end
+                    end
+                    2'h2: begin
+                        if (amo_req_tag == curr_bank_core_rsp_tag && curr_bank_core_req_ready == 1) begin
+                            is_amo_processing <= 0;
+                            // TODO turn on the ready bit for the cache
+                            // stop the st response from makig it back to the lsu
+                            curr_bank_resp_data <= amo_load_result;
+                        end
+                    end    
+                    default:;
+                    endcase
+                end
             end
+        
+            VX_amo_alu_unit #(
+                .DATAW              (32)
+            ) amo_alu_unit (
+                .clk        (clk),
+                .reset      (reset),
+                .alu_op     (curr_bank_core_req_op_mod),
+                .alu_in1    (curr_bank_core_rsp_data[0]),
+                .alu_in2    (amo_req_data),
+                .alu_result (amo_alu_result)
+            );
         end
-
-        VX_amo_alu_unit #(
-            .DATAW              (32)
-        ) amo_alu_unit (
-            .clk        (clk),
-            .reset      (reset),
-            .alu_op     (curr_bank_core_req_op_mod),
-            .alu_in1    (curr_bank_core_rsp_data[0]),
-            .alu_in2    (curr_bank_core_req_data[0]),
-            .alu_result (amo_alu_result)
-        );
-
-
 
         VX_bank #(                
             .BANK_ID            (i),

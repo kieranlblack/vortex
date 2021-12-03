@@ -27,18 +27,22 @@ module VX_amo_alu_unit #(
     wire is_less = sub_in1 < sub_in2;
 
     always @(posedge clk) begin
-        case(alu_op) 
-            `INST_AMO_ADD: alu_result <= alu_in1 + alu_in2;
-            `INST_AMO_SWAP: alu_result <= alu_in2;
-            `INST_AMO_XOR: alu_result <= alu_in1 ^ alu_in2;
-            `INST_AMO_OR: alu_result <= alu_in1 | alu_in2;
-            `INST_AMO_AND: alu_result <= alu_in1 & alu_in2;
-            `INST_AMO_MIN: alu_result <= is_less ? alu_in1 : alu_in2;
-            `INST_AMO_MAX: alu_result <= is_less ? alu_in2 : alu_in1;
-            `INST_AMO_MINU: alu_result <= is_less ? alu_in1 : alu_in2;
-            `INST_AMO_MAXU: alu_result <= is_less ? alu_in2 : alu_in1;
-            default: alu_result <= 32'b0;
-        endcase    
+        if (reset) begin
+            alu_result <= 32'b0;
+        end else begin
+            case(alu_op) 
+                `INST_AMO_ADD: alu_result <= alu_in1 + alu_in2;
+                `INST_AMO_SWAP: alu_result <= alu_in2;
+                `INST_AMO_XOR: alu_result <= alu_in1 ^ alu_in2;
+                `INST_AMO_OR: alu_result <= alu_in1 | alu_in2;
+                `INST_AMO_AND: alu_result <= alu_in1 & alu_in2;
+                `INST_AMO_MIN: alu_result <= is_less ? alu_in1 : alu_in2;
+                `INST_AMO_MAX: alu_result <= is_less ? alu_in2 : alu_in1;
+                `INST_AMO_MINU: alu_result <= is_less ? alu_in1 : alu_in2;
+                `INST_AMO_MAXU: alu_result <= is_less ? alu_in2 : alu_in1;
+                default: alu_result <= 32'b0;
+            endcase    
+        end
     end
 
 endmodule
