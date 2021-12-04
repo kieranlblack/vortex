@@ -263,7 +263,8 @@ module VX_decode  #(
             end
         `ifdef EXT_A_ENABLE
             `INST_AMO: begin
-                // TODO: SC instruction will require a use_rd = 0
+                dpi_trace("DECODED AN AMO!!!!\n");
+                dpi_trace("PC = 0%h\n", decode_if.PC);
                 ex_type = `EX_LSU;
                 op_type = `INST_OP_BITS'(func3);
                 op_mod  = `INST_MOD_BITS'(func5);
