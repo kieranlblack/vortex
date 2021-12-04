@@ -197,8 +197,8 @@ module VX_mem_unit # (
             .TAG_WIDTH (`DCACHE_CORE_TAG_WIDTH-`SM_ENABLE)
         ) smem_req_if();
 
-        assign smem_req_if.is_amo = 0;
-        assign smem_req_if.op_mod = 0;
+        // assign smem_req_if.is_amo = 0;
+        // assign smem_req_if.op_mod = 0;
 
         VX_dcache_rsp_if #(
             .NUM_REQS  (`DCACHE_NUM_REQS), 
@@ -224,8 +224,10 @@ module VX_mem_unit # (
 
             // input request
             .req_valid_in   (dcache_req_if.valid),
-            .req_rw_in      (dcache_req_if.rw),        
-            .req_byteen_in  (dcache_req_if.byteen),        
+            .req_rw_in      (dcache_req_if.rw),
+            .req_op_mod_in  (dcache_req_if.op_mod),
+            .req_is_amo_in  (dcache_req_if.is_amo),
+            .req_byteen_in  (dcache_req_if.byteen),
             .req_addr_in    (dcache_req_if.addr),
             .req_data_in    (dcache_req_if.data),
             .req_tag_in     (dcache_req_if.tag),
@@ -234,6 +236,10 @@ module VX_mem_unit # (
             // output requests
             .req_valid_out  ({smem_req_if.valid,  dcache_req_tmp_if.valid}),
             .req_rw_out     ({smem_req_if.rw,     dcache_req_tmp_if.rw}),
+
+            // smem_req_if.op_mod and is_amo aren't being used.
+            .req_op_mod_out ({smem_req_if.op_mod, dcache_req_tmp_if.op_mod}),
+            .req_is_amo_out ({smem_req_if.is_amo, dcache_req_tmp_if.is_amo}),
             .req_byteen_out ({smem_req_if.byteen, dcache_req_tmp_if.byteen}),
             .req_addr_out   ({smem_req_if.addr,   dcache_req_tmp_if.addr}),
             .req_data_out   ({smem_req_if.data,   dcache_req_tmp_if.data}),  
