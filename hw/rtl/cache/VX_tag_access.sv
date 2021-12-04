@@ -31,6 +31,7 @@ module VX_tag_access #(
     input wire[`LINE_ADDR_WIDTH-1:0]    addr,
     input wire                          fill,    
     input wire                          flush,
+  
     output wire                         tag_match
 );
 
@@ -44,6 +45,20 @@ module VX_tag_access #(
     
     wire [`LINE_SELECT_BITS-1:0] line_addr = addr[`LINE_SELECT_BITS-1:0];
     wire [`TAG_SELECT_BITS-1:0] line_tag = `LINE_TAG_ADDR(addr);
+
+    /*
+    VX_sp_ram #(
+        .DATAW      (`TAG_SELECT_BITS + 1 + 1),
+        .SIZE       (`LINES_PER_BANK),
+        .NO_RWCHECK (1)
+    ) tag_store (
+        .clk   (clk),
+        .addr  (line_addr),   
+        .wren  (fill || flush),
+        .wdata ({should_reserve, !flush, line_tag}),
+        .rdata ({reserved, read_valid, read_tag})
+    );
+    */
 
     VX_sp_ram #(
         .DATAW      (`TAG_SELECT_BITS + 1),

@@ -263,6 +263,7 @@ module VX_decode  #(
             end
         `ifdef EXT_A_ENABLE
             `INST_AMO: begin
+                // TODO: SC instruction will require a use_rd = 0
                 ex_type = `EX_LSU;
                 op_type = `INST_OP_BITS'(func3);
                 op_mod  = `INST_MOD_BITS'(func5);
