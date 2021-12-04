@@ -268,6 +268,7 @@ module VX_decode  #(
                 op_type = `INST_OP_BITS'(func3);
                 op_mod  = `INST_MOD_BITS'(func5);
                 is_amo  = 1;
+                use_rd = 1;
                 `USED_IREG (rd);
                 `USED_IREG (rs1);
                 `USED_IREG (rs2);

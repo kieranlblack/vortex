@@ -541,17 +541,14 @@ module VX_cache #(
         reg [1:0]                   curr_bank_amo_state = 0;
         reg                         is_amo_processing = 0;
         reg                         amo_valid = 0;
-        reg                         curr_bank_amo_do_store = 0;
         reg                         amo_rw = 0;
         wire [31:0]                 curr_bank_amo_alu_result;
 
         wire [NUM_PORTS-1:0]                       curr_bank_amo_req_pmask;
         wire [NUM_PORTS-1:0][WORD_SELECT_BITS-1:0] curr_bank_amo_req_wsel;
         wire [NUM_PORTS-1:0][WORD_SIZE-1:0]        curr_bank_amo_req_byteen;
-        wire [NUM_PORTS-1:0][`WORD_WIDTH-1:0]      curr_bank_amo_req_data;
         wire [NUM_PORTS-1:0][`REQS_BITS-1:0]       curr_bank_amo_req_tid;
         wire [NUM_PORTS-1:0][CORE_TAG_X_WIDTH-1:0] curr_bank_amo_req_tag;
-        wire [`INST_MOD_BITS-1:0]                  curr_bank_amo_req_op_mod;
         wire [`LINE_ADDR_WIDTH-1:0]                curr_bank_amo_req_addr;
         
         // Core Req
@@ -560,19 +557,20 @@ module VX_cache #(
         // curr_bank_core_req_data (at first hold alu_in2) (then it should hold the new value to store to mem)
         // might need to fuck with the ready?
         assign curr_bank_core_req_valid   = is_amo_processing ? amo_valid : per_bank_core_req_valid[i];
-        assign curr_bank_core_req_pmask   = curr_bank_amo_do_store ? curr_bank_amo_req_pmask : per_bank_core_req_pmask[i];
-        assign curr_bank_core_req_addr    = curr_bank_amo_do_store ? curr_bank_amo_req_addr : per_bank_core_req_addr[i];
         assign curr_bank_core_req_rw      = is_amo_processing ? amo_rw : per_bank_core_req_rw[i];
         assign curr_bank_core_req_op_mod  = per_bank_core_req_op_mod[i];
         assign curr_bank_core_req_is_amo  = per_bank_core_req_is_amo[i];
-        assign curr_bank_core_req_wsel    = curr_bank_amo_do_store ? curr_bank_amo_req_wsel : per_bank_core_req_wsel[i];
-        assign curr_bank_core_req_byteen  = curr_bank_amo_do_store ? curr_bank_amo_req_byteen : per_bank_core_req_byteen[i];
         // alu_in2
-        assign curr_bank_core_req_data    = is_amo_processing ? {NUM_PORTS{curr_bank_amo_alu_result}} : per_bank_core_req_data[i];
-        assign curr_bank_core_req_tag     = curr_bank_amo_do_store ? curr_bank_amo_req_tag : per_bank_core_req_tag[i];
-        assign curr_bank_core_req_tid     = curr_bank_amo_do_store ? curr_bank_amo_req_tid : per_bank_core_req_tid[i];
+        
+        assign curr_bank_core_req_pmask   = is_amo_processing ? curr_bank_amo_req_pmask : per_bank_core_req_pmask[i];  // this one
+        assign curr_bank_core_req_addr    = is_amo_processing ? curr_bank_amo_req_addr : per_bank_core_req_addr[i];     // this one
+        assign curr_bank_core_req_wsel    = is_amo_processing ? curr_bank_amo_req_wsel : per_bank_core_req_wsel[i];    // this one
+        assign curr_bank_core_req_byteen  = is_amo_processing ? curr_bank_amo_req_byteen : per_bank_core_req_byteen[i];    // this one
+        assign curr_bank_core_req_data    = is_amo_processing ? {NUM_PORTS{curr_bank_amo_alu_result}} : per_bank_core_req_data[i];  // this one
+        assign curr_bank_core_req_tag     = is_amo_processing ? curr_bank_amo_req_tag : per_bank_core_req_tag[i];  // this one
+        assign curr_bank_core_req_tid     = is_amo_processing ? curr_bank_amo_req_tid : per_bank_core_req_tid[i];  // this one
         assign per_bank_core_req_ready[i] = is_amo_processing ? 0 : curr_bank_core_req_ready;
-
+        
         // Core WB
         assign curr_bank_core_rsp_ready   = per_bank_core_rsp_ready[i];
         assign per_bank_core_rsp_valid[i] = curr_bank_core_rsp_valid && curr_bank_amo_state != 2'h2;
@@ -609,33 +607,45 @@ module VX_cache #(
 
         `RESET_RELAY (bank_reset);
 
-        if (AMO_ENABLE) begin
+            wire [NUM_PORTS-1:0][`WORD_WIDTH-1:0]      curr_bank_amo_req_data;
+            wire [`INST_MOD_BITS-1:0]                  curr_bank_amo_req_op_mod;
+
             VX_pipe_register #(
-                .DATAW  ((NUM_PORTS + NUM_PORTS * (WORD_SELECT_BITS + WORD_SIZE + `WORD_WIDTH + `REQS_BITS + CORE_TAG_X_WIDTH) + `INST_MOD_BITS + `LINE_ADDR_WIDTH)),
+                .DATAW  ((NUM_PORTS + NUM_PORTS * (WORD_SELECT_BITS + WORD_SIZE + `WORD_WIDTH + `REQS_BITS + CORE_TAG_X_WIDTH) + `LINE_ADDR_WIDTH)+`INST_MOD_BITS),
                 .RESETW (1)
             ) amo_req_reg (
                 .clk      (clk),
                 .reset    (reset),
                 .enable   ((curr_bank_core_req_valid && curr_bank_core_req_is_amo) && ~is_amo_processing),
                 .data_in  ({curr_bank_core_req_pmask,
-                            curr_bank_core_req_op_mod,
                             curr_bank_core_req_addr,
                             curr_bank_core_req_wsel,
+                            curr_bank_core_req_op_mod,
                             curr_bank_core_req_byteen,
                             curr_bank_core_req_data,
                             curr_bank_core_req_tag,
                             curr_bank_core_req_tid}),
                 .data_out ({curr_bank_amo_req_pmask,
-                            curr_bank_amo_req_op_mod,
                             curr_bank_amo_req_addr,
                             curr_bank_amo_req_wsel,
+                            curr_bank_amo_req_op_mod,
                             curr_bank_amo_req_byteen,
                             curr_bank_amo_req_data, // <---
                             curr_bank_amo_req_tag,
                             curr_bank_amo_req_tid})
             );
+            VX_amo_alu_unit #(
+                .DATAW      (32)
+            ) amo_alu_unit (
+                .clk        (clk),
+                .reset      (reset),
+                .alu_op     (curr_bank_amo_req_op_mod),
+                .alu_in1    (curr_bank_core_rsp_data[0]), // TODO: only works with 1 port regfile
+                .alu_in2    (curr_bank_amo_req_data[0]),
+                .alu_result (curr_bank_amo_alu_result)
+            );
 
-
+        if (AMO_ENABLE) begin
             // TODO: we are tyring to figure out how to stall the requests after the amo intsruction in the lsu using. We 
             // know that the output core_req_ready will make the lsu unit start stalling. but we were looking and worrying about the 
             // nc_bypass as it is enabled for our dcache. We still need to save the ld rsp part from the 
@@ -659,7 +669,6 @@ module VX_cache #(
                             // TODO: save amo result and need to save a ld response to send back. As we dont want send back a st response.
                             amo_valid <= 1;
                             amo_rw <= 1;
-                            curr_bank_amo_do_store <= 1;
 
                             // Move to the next state
                             curr_bank_amo_state <= 2'h2;
@@ -668,7 +677,6 @@ module VX_cache #(
                     2'h2: begin
                         // sending a store request to a bank.
                         amo_valid <= 0;
-                        curr_bank_amo_do_store <= 0;
                         is_amo_processing <= 0;
                         // TODO: turn on the ready bit for the cache
                         // stop the st response from makig it back to the lsu
@@ -679,16 +687,7 @@ module VX_cache #(
                 end
             end
         
-            VX_amo_alu_unit #(
-                .DATAW      (32)
-            ) amo_alu_unit (
-                .clk        (clk),
-                .reset      (reset),
-                .alu_op     (curr_bank_amo_req_op_mod),
-                .alu_in1    (curr_bank_core_rsp_data[0]), // TODO: only works with 1 port regfile
-                .alu_in2    (curr_bank_amo_req_data[0]),
-                .alu_result (curr_bank_amo_alu_result)
-            );
+            
         end else begin
             `UNUSED_VAR(curr_bank_core_req_op_mod)
             `UNUSED_VAR(curr_bank_core_req_is_amo)
