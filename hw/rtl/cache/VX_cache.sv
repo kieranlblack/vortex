@@ -651,7 +651,12 @@ module VX_cache #(
         
         if (AMO_ENABLE) begin
             always @(posedge clk) begin
-                if (is_amo_processing || (curr_bank_core_req_valid && curr_bank_core_req_is_amo)) begin
+                if (reset) begin 
+                    is_amo_processing <= 0;
+                    curr_bank_amo_state <= 0;
+                    amo_valid <= 0;
+                    amo_rw <= 0;
+                end else if (is_amo_processing || (curr_bank_core_req_valid && curr_bank_core_req_is_amo)) begin
                     case (curr_bank_amo_state)
                     2'h0: begin
                         is_amo_processing <= 1;
@@ -660,6 +665,7 @@ module VX_cache #(
                     end
                     2'h1: begin
                         if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0] && curr_bank_core_rsp_valid) begin
+                        // if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0]) begin
                             amo_valid <= 1;
                             amo_rw <= 1;
 
