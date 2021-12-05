@@ -654,14 +654,12 @@ module VX_cache #(
                 if (is_amo_processing || (curr_bank_core_req_valid && curr_bank_core_req_is_amo)) begin
                     case (curr_bank_amo_state)
                     2'h0: begin
-                        dpi_trace("AMO STATE 0->1 for mask=%d, addr=%d\n", curr_bank_core_req_pmask, curr_bank_core_req_addr);
                         is_amo_processing <= 1;
                         amo_valid <= 0;
                         curr_bank_amo_state <= 2'h1;
                     end
                     2'h1: begin
-                        if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0]) begin
-                            dpi_trace("AMO STATE 1->2 for mask=%d, addr=%d\n", curr_bank_amo_req_pmask, curr_bank_amo_req_addr);
+                        if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0] && curr_bank_core_rsp_valid) begin
                             amo_valid <= 1;
                             amo_rw <= 1;
 
@@ -670,7 +668,6 @@ module VX_cache #(
                         end
                     end
                     2'h2: begin
-                        dpi_trace("AMO STATE finish for mask=%d, addr=%d\n", curr_bank_amo_req_pmask, curr_bank_amo_req_addr);
                         amo_valid <= 0;
                         is_amo_processing <= 0;
                         curr_bank_amo_state <= 2'h0;

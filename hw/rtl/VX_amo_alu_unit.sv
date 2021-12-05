@@ -24,7 +24,7 @@ module VX_amo_alu_unit #(
     wire [32:0] sub_in1 = {alu_signed & alu_in1[31], alu_in1};
     wire [32:0] sub_in2 = {alu_signed & alu_in2[31], alu_in2};
 
-    wire is_less = sub_in1 < sub_in2;
+    wire is_less = ($signed(sub_in1) < $signed(sub_in2));
 
     always @(posedge clk) begin
         if (reset) begin

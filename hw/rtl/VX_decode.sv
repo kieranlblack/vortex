@@ -263,13 +263,12 @@ module VX_decode  #(
             end
         `ifdef EXT_A_ENABLE
             `INST_AMO: begin
-                dpi_trace("DECODED AN AMO!!!!\n");
-                dpi_trace("PC = 0%h\n", decode_if.PC);
                 ex_type = `EX_LSU;
                 op_type = `INST_OP_BITS'(func3);
                 op_mod  = `INST_MOD_BITS'(func5);
                 is_amo  = 1;
                 use_rd  = 1;
+                imm = 0;
                 `USED_IREG (rd);
                 `USED_IREG (rs1);
                 `USED_IREG (rs2);
