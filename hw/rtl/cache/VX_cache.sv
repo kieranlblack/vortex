@@ -515,6 +515,8 @@ module VX_cache #(
         wire                        curr_bank_core_req_is_amo;
         wire [`LINE_ADDR_WIDTH-1:0] curr_bank_core_req_addr;        
         wire                        curr_bank_core_req_ready;
+        wire                        curr_bank_core_req_is_lr;
+        wire                        curr_bank_core_req_is_sc;
 
         wire                        curr_bank_core_rsp_valid;
         wire [NUM_PORTS-1:0]        curr_bank_core_rsp_pmask;        
@@ -572,6 +574,9 @@ module VX_cache #(
             is_amo_processing ? curr_bank_amo_req_tag : per_bank_core_req_tag[i];  // this one
         assign curr_bank_core_req_tid     = 
             is_amo_processing ? curr_bank_amo_req_tid : per_bank_core_req_tid[i];  // this one
+        assign curr_bank_core_req_is_lr = curr_bank_core_req_is_amo && (curr_bank_core_req_op_mod == `INST_AMO_LR);
+        assign curr_bank_core_req_is_sc = curr_bank_core_req_is_amo && (curr_bank_core_req_op_mod == `INST_AMO_SC);
+        
         assign per_bank_core_req_ready[i] = 
             is_amo_processing ? 0 : curr_bank_core_req_ready;
         
@@ -634,7 +639,7 @@ module VX_cache #(
                         curr_bank_amo_req_wsel,
                         curr_bank_amo_req_op_mod,
                         curr_bank_amo_req_byteen,
-                        curr_bank_amo_req_data, // <---
+                        curr_bank_amo_req_data,
                         curr_bank_amo_req_tag,
                         curr_bank_amo_req_tid})
         );
@@ -656,16 +661,20 @@ module VX_cache #(
                     curr_bank_amo_state <= 0;
                     amo_valid <= 0;
                     amo_rw <= 0;
-                end else if (is_amo_processing || (curr_bank_core_req_valid && curr_bank_core_req_is_amo)) begin
+                end else begin
                     case (curr_bank_amo_state)
                     2'h0: begin
-                        is_amo_processing <= 1;
-                        amo_valid <= 0;
-                        curr_bank_amo_state <= 2'h1;
+                        if (is_amo_processing || (curr_bank_core_req_valid && curr_bank_core_req_is_amo)) begin
+                            // LR and SC operations are AMO operations but should not trigger amo state machine transitions
+                            if (curr_bank_core_req_op_mod != `INST_AMO_LR && curr_bank_core_req_op_mod != `INST_AMO_SC) begin
+                                is_amo_processing <= 1;
+                                amo_valid <= 0;
+                                curr_bank_amo_state <= 2'h1;
+                            end
+                        end
                     end
                     2'h1: begin
                         if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0] && curr_bank_core_rsp_valid) begin
-                        // if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0]) begin
                             amo_valid <= 1;
                             amo_rw <= 1;
 
@@ -730,6 +739,8 @@ module VX_cache #(
             .core_req_data      (curr_bank_core_req_data),
             .core_req_tag       (curr_bank_core_req_tag),
             .core_req_tid       (curr_bank_core_req_tid),
+            .core_req_is_lr     (curr_bank_core_req_is_lr),
+            .core_req_is_sc     (curr_bank_core_req_is_sc),
             .core_req_ready     (curr_bank_core_req_ready),
 
             // Core response                
