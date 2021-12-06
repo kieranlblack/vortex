@@ -31,7 +31,8 @@ module VX_tag_access #(
     input wire[`LINE_ADDR_WIDTH-1:0]    addr,
     input wire                          fill,    
     input wire                          flush,
-    input wire                          is_write,
+    input wire                          is_load,
+    input wire                          is_mrsq_enable,
     input wire                          should_reserve,
       
     output wire                         tag_match,
@@ -57,7 +58,14 @@ module VX_tag_access #(
         .clk   (clk),
         .addr  (line_addr),   
         .wren  (fill || flush),
-        .wdata ({(is_write && !tag_match) ? reserved : should_reserve, !flush, line_tag}),  // should this be 0 or reserved?
+        /*
+        instruction 	miss 	hit
+        lr 		        1   	1
+        sc		        0      	0
+        lw		        x      	x
+        sw		        0   	0
+        */
+        .wdata ({(is_load || is_mrsq_enable) ? reserved : should_reserve, !flush, line_tag}),  // should this be 0 or reserved?
         .rdata ({reserved, read_valid, read_tag})
     );
 

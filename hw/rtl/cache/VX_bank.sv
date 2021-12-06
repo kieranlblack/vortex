@@ -169,6 +169,7 @@ module VX_bank #(
     wire                            is_flush_st0;
     wire                            is_lr_st0;
     wire                            is_sc_st0, is_sc_st1;
+    wire                            mrsq_enable_st0;
     wire                            mshr_pending_st0, mshr_pending_st1;
 
     // prevent read-during-write hazard when accessing tags/data block RAMs
@@ -219,7 +220,7 @@ module VX_bank #(
     end
 
     VX_pipe_register #(
-        .DATAW  (1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + `LINE_ADDR_WIDTH + `CACHE_LINE_WIDTH + NUM_PORTS * (WORD_SELECT_BITS + WORD_SIZE + `REQS_BITS + 1 + CORE_TAG_WIDTH) + MSHR_ADDR_WIDTH),
+        .DATAW  (1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + `LINE_ADDR_WIDTH + `CACHE_LINE_WIDTH + NUM_PORTS * (WORD_SELECT_BITS + WORD_SIZE + `REQS_BITS + 1 + CORE_TAG_WIDTH) + MSHR_ADDR_WIDTH),
         .RESETW (1)
     ) pipe_reg0 (
         .clk      (clk),
@@ -231,7 +232,7 @@ module VX_bank #(
             mshr_valid ? mshr_is_lr : creq_is_lr,
             creq_is_sc,
             mshr_enable,
-            mrsq_enable || (creq_valid && (creq_is_lr || creq_is_sc)) || (creq_enable && creq_rw),
+            mrsq_enable || (creq_valid && (creq_is_lr || creq_is_sc)) || (creq_enable && creq_rw) || (mshr_valid && mshr_is_lr),
             creq_enable && (~creq_rw && ~creq_is_sc),
             creq_enable && (creq_rw || creq_is_sc),
             flush_enable ? `LINE_ADDR_WIDTH'(flush_addr) : (mshr_valid ? mshr_addr : (mem_rsp_valid ? mem_rsp_addr : creq_addr)),
@@ -241,9 +242,10 @@ module VX_bank #(
             mshr_valid ? mshr_tid : creq_tid,
             mshr_valid ? mshr_pmask : creq_pmask,
             mshr_valid ? mshr_tag : creq_tag,
-            mshr_valid ? mshr_dequeue_id : mem_rsp_id
+            mshr_valid ? mshr_dequeue_id : mem_rsp_id,
+            mrsq_enable
         }),
-        .data_out ({valid_st0, is_flush_st0, is_lr_st0, is_sc_st0, is_mshr_st0, is_fill_st0, is_read_st0, is_write_st0, addr_st0, wdata_st0, wsel_st0, byteen_st0, req_tid_st0, pmask_st0, tag_st0, mshr_id_st0})
+        .data_out ({valid_st0, is_flush_st0, is_lr_st0, is_sc_st0, is_mshr_st0, is_fill_st0, creq_is_sc ? 1'b0 : is_read_st0, is_write_st0, addr_st0, wdata_st0, wsel_st0, byteen_st0, req_tid_st0, pmask_st0, tag_st0, mshr_id_st0,mrsq_enable_st0})
     );
 
 `ifdef DBG_CACHE_REQ_INFO
@@ -285,7 +287,8 @@ module VX_bank #(
         .addr              (addr_st0),        
         .fill              (do_fill_st0),
         .flush             (do_flush_st0),
-        .is_write          (is_write_st0), 
+        .is_load           (is_read_st0 && !is_lr_st0), 
+        .is_mrsq_enable    (mrsq_enable_st0),
         .should_reserve    (do_should_reserve_st0), // if mshr_enable && 
         .tag_match         (tag_match_st0),
         .reserved          (is_reserved_st0)
@@ -367,7 +370,7 @@ module VX_bank #(
     ) mshr_pending_size (
         .clk   (clk),
         .reset (reset),
-        .incr  (creq_fire && ~creq_rw),
+        .incr  (creq_fire && (~creq_rw && ~creq_is_sc)),
         .decr  (mshr_fire || mshr_release),
         .full  (mshr_alm_full),
         `UNUSED_PIN (size),
