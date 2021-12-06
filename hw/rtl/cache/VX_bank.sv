@@ -149,6 +149,7 @@ module VX_bank #(
     wire [NUM_PORTS-1:0][WORD_SELECT_BITS-1:0] mshr_wsel;
     wire [NUM_PORTS-1:0][`REQS_BITS-1:0] mshr_tid;
     wire [NUM_PORTS-1:0]            mshr_pmask;
+    wire                            mshr_is_lr;
     
     wire [`LINE_ADDR_WIDTH-1:0]     addr_st0, addr_st1;
     wire                            is_read_st0, is_read_st1;
@@ -227,7 +228,7 @@ module VX_bank #(
         .data_in  ({
             flush_fire || mshr_fire || mem_rsp_fire || creq_fire,
             flush_enable,
-            creq_is_lr,
+            mshr_valid ? mshr_is_lr : creq_is_lr,
             creq_is_sc,
             mshr_enable,
             mrsq_enable || (creq_valid && (creq_is_lr || creq_is_sc)) || (creq_enable && creq_rw),
@@ -283,8 +284,9 @@ module VX_bank #(
         .lookup            (do_lookup_st0),
         .addr              (addr_st0),        
         .fill              (do_fill_st0),
-        .flush             (do_flush_st0), 
-        .should_reserve    (do_should_reserve_st0),
+        .flush             (do_flush_st0),
+        .is_write          (is_write_st0), 
+        .should_reserve    (do_should_reserve_st0), // if mshr_enable && 
         .tag_match         (tag_match_st0),
         .reserved          (is_reserved_st0)
     );
@@ -398,7 +400,7 @@ module VX_bank #(
         // allocate
         .allocate_valid     (mshr_allocate),
         .allocate_addr      (addr_st0),
-        .allocate_data      ({wsel_st0, tag_st0, req_tid_st0, pmask_st0}),
+        .allocate_data      ({wsel_st0, tag_st0, req_tid_st0, pmask_st0, is_lr_st0}),
         .allocate_id        (mshr_alloc_id),
         `UNUSED_PIN (allocate_ready),
 
@@ -415,10 +417,10 @@ module VX_bank #(
         .fill_addr          (mem_rsp_addr),
 
         // dequeue
-        .dequeue_valid      (mshr_valid),
+        .dequeue_valid      (mshr_valid), // add signals is_lr, is_sc
         .dequeue_id         (mshr_dequeue_id),
         .dequeue_addr       (mshr_addr),
-        .dequeue_data       ({mshr_wsel, mshr_tag, mshr_tid, mshr_pmask}),
+        .dequeue_data       ({mshr_wsel, mshr_tag, mshr_tid, mshr_pmask, mshr_is_lr}),
         .dequeue_ready      (mshr_ready),
 
         // release
