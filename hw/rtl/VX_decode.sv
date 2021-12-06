@@ -417,7 +417,7 @@ module VX_decode  #(
     `UNUSED_VAR (func2)
 
     // disable write to integer register r0
-    wire wb = use_rd && (| rd_r);
+    wire wb = use_rd && (is_amo || (| rd_r));
 
     assign decode_if.valid     = ifetch_rsp_if.valid;
     assign decode_if.wid       = ifetch_rsp_if.wid;

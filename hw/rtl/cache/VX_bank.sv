@@ -245,7 +245,7 @@ module VX_bank #(
             mshr_valid ? mshr_dequeue_id : mem_rsp_id,
             mrsq_enable
         }),
-        .data_out ({valid_st0, is_flush_st0, is_lr_st0, is_sc_st0, is_mshr_st0, is_fill_st0, creq_is_sc ? 1'b0 : is_read_st0, is_write_st0, addr_st0, wdata_st0, wsel_st0, byteen_st0, req_tid_st0, pmask_st0, tag_st0, mshr_id_st0,mrsq_enable_st0})
+        .data_out ({valid_st0, is_flush_st0, is_lr_st0, is_sc_st0, is_mshr_st0, is_fill_st0, is_read_st0, is_write_st0, addr_st0, wdata_st0, wsel_st0, byteen_st0, req_tid_st0, pmask_st0, tag_st0, mshr_id_st0,mrsq_enable_st0})
     );
 
 `ifdef DBG_CACHE_REQ_INFO
