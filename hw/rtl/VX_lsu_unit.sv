@@ -133,7 +133,7 @@ module VX_lsu_unit #(
     wire mbuf_push = ~mbuf_full
                   && (| ({`NUM_THREADS{req_valid}} & req_tmask_dup & dcache_req_if.ready))
                   && is_req_start   // first submission only                  
-                  && req_wb;        // loads only
+                  && (req_wb || req_is_amo);        // loads only
 
     wire mbuf_pop = dcache_rsp_fire && (0 == rsp_rem_mask_n);
     
@@ -200,8 +200,8 @@ module VX_lsu_unit #(
     end
 
     // ensure all dependencies for the requests are resolved
-    wire req_dep_ready = (req_wb && ~(mbuf_full && is_req_start)) 
-                      || (~req_wb && st_commit_if.ready);
+    wire req_dep_ready = ((req_wb || req_is_amo) && ~(mbuf_full && is_req_start)) 
+                      || (~(req_wb || req_is_amo) && st_commit_if.ready);
 
     // DCache Request
 
@@ -211,15 +211,17 @@ module VX_lsu_unit #(
         reg [31:0] mem_req_data;
 
         always @(*) begin
-            mem_req_byteen = {4{req_wb}};
-            case (`INST_LSU_WSIZE(req_type))
-                0: mem_req_byteen[req_offset[i]] = 1;
-                1: begin
-                    mem_req_byteen[req_offset[i]] = 1;
-                    mem_req_byteen[{req_addr[i][1], 1'b1}] = 1;
-                end
-                default : mem_req_byteen = {4{1'b1}};
-            endcase
+            mem_req_byteen = {4{(req_wb || req_is_amo)}};
+            if (~req_is_amo) begin
+                case (`INST_LSU_WSIZE(req_type))
+                    0: mem_req_byteen[req_offset[i]] = 1;
+                    1: begin
+                        mem_req_byteen[req_offset[i]] = 1;
+                        mem_req_byteen[{req_addr[i][1], 1'b1}] = 1;
+                    end
+                    default : mem_req_byteen = {4{1'b1}};
+                endcase
+            end
         end
 
         always @(*) begin
@@ -233,7 +235,7 @@ module VX_lsu_unit #(
         end
 
         assign dcache_req_if.valid[i]  = req_valid && req_dep_ready && req_tmask_dup[i] && !req_sent_mask[i];
-        assign dcache_req_if.rw[i]     = ~req_wb;
+        assign dcache_req_if.rw[i]     = ~(req_wb || req_is_amo);
         assign dcache_req_if.op_mod[i] = req_op_mod;
         assign dcache_req_if.is_amo[i] = req_is_amo;
         assign dcache_req_if.addr[i]   = req_addr[i][31:2];
@@ -251,7 +253,7 @@ module VX_lsu_unit #(
 
     // send store commit
 
-    wire is_store_rsp = req_valid && ~req_wb && dcache_req_ready;
+    wire is_store_rsp = req_valid && ~(req_wb || req_is_amo) && dcache_req_ready;
 
     assign st_commit_if.valid = is_store_rsp;
     assign st_commit_if.wid   = req_wid;

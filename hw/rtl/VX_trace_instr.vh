@@ -19,7 +19,8 @@ endtask
 task trace_ex_op (
   input [`EX_BITS-1:0] ex_type,
   input [`INST_OP_BITS-1:0] op_type,
-  input [`INST_MOD_BITS-1:0] op_mod
+  input [`INST_MOD_BITS-1:0] op_mod,
+  input is_amo
 );
     case (ex_type)        
     `EX_ALU: begin
@@ -71,24 +72,39 @@ task trace_ex_op (
         end
     end
     `EX_LSU: begin
-        if (op_mod == 0) begin
-            case (`INST_LSU_BITS'(op_type))
-                `INST_LSU_LB: dpi_trace("LB");
-                `INST_LSU_LH: dpi_trace("LH");
-                `INST_LSU_LW: dpi_trace("LW");
-                `INST_LSU_LBU:dpi_trace("LBU");
-                `INST_LSU_LHU:dpi_trace("LHU");
-                `INST_LSU_SB: dpi_trace("SB");
-                `INST_LSU_SH: dpi_trace("SH");
-                `INST_LSU_SW: dpi_trace("SW");
+        if (is_amo) begin
+            case (op_mod)
+                `INST_AMO_ADD:  dpi_trace("AMOADD");
+                `INST_AMO_SWAP: dpi_trace("AMOAWAP");
+                `INST_AMO_XOR:  dpi_trace("AMOXOR");
+                `INST_AMO_OR:   dpi_trace("AMOOR");
+                `INST_AMO_AND:  dpi_trace("AMOAND");
+                `INST_AMO_MIN:  dpi_trace("AMOMIN");
+                `INST_AMO_MAX:  dpi_trace("AMOMAX");
+                `INST_AMO_MINU: dpi_trace("AMOMINU");
+                `INST_AMO_MAXU: dpi_trace("AMOMAXU");
                 default: dpi_trace("?");
             endcase
-        end else if (op_mod == 1) begin
-            case (`INST_FENCE_BITS'(op_type))
-                `INST_FENCE_D: dpi_trace("DFENCE");
-                `INST_FENCE_I: dpi_trace("IFENCE");
-                default: dpi_trace("?");
-            endcase
+        end else begin
+            if (op_mod == 0) begin
+                case (`INST_LSU_BITS'(op_type))
+                    `INST_LSU_LB: dpi_trace("LB");
+                    `INST_LSU_LH: dpi_trace("LH");
+                    `INST_LSU_LW: dpi_trace("LW");
+                    `INST_LSU_LBU:dpi_trace("LBU");
+                    `INST_LSU_LHU:dpi_trace("LHU");
+                    `INST_LSU_SB: dpi_trace("SB");
+                    `INST_LSU_SH: dpi_trace("SH");
+                    `INST_LSU_SW: dpi_trace("SW");
+                    default: dpi_trace("?");
+                endcase
+            end else if (op_mod == 1) begin
+                case (`INST_FENCE_BITS'(op_type))
+                    `INST_FENCE_D: dpi_trace("DFENCE");
+                    `INST_FENCE_I: dpi_trace("IFENCE");
+                    default: dpi_trace("?");
+                endcase
+            end
         end
     end
     `EX_CSR: begin

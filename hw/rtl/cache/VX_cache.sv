@@ -540,7 +540,7 @@ module VX_cache #(
         wire [`CACHE_LINE_WIDTH-1:0] curr_bank_mem_rsp_data;
         wire                        curr_bank_mem_rsp_ready;
 
-        reg [1:0]                   curr_bank_amo_state = 0;
+        reg                         curr_bank_amo_state = 0;
         reg                         is_amo_processing = 0;
         reg                         amo_valid = 0;
         reg                         amo_rw = 0;
@@ -583,7 +583,7 @@ module VX_cache #(
         
         // Core WB
         assign curr_bank_core_rsp_ready   = per_bank_core_rsp_ready[i];
-        assign per_bank_core_rsp_valid[i] = curr_bank_core_rsp_valid && ~curr_bank_amo_no_do_rsp;
+        assign per_bank_core_rsp_valid[i] = curr_bank_core_rsp_valid && ~(is_amo_processing && curr_bank_amo_no_do_rsp && (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0]));
         assign per_bank_core_rsp_pmask[i] = curr_bank_core_rsp_pmask;
         assign per_bank_core_rsp_tid  [i] = curr_bank_core_rsp_tid;
         assign per_bank_core_rsp_tag  [i] = curr_bank_core_rsp_tag;
@@ -627,7 +627,7 @@ module VX_cache #(
             .clk      (clk),
             .reset    (reset),
             .enable   (~is_amo_processing),
-            .data_in  ({per_bank_core_req_rw[i] && curr_bank_core_req_is_amo,
+            .data_in  ({per_bank_core_req_rw[i] && curr_bank_core_req_is_amo && curr_bank_core_req_valid,
                         curr_bank_core_req_pmask,
                         curr_bank_core_req_addr,
                         curr_bank_core_req_wsel,
@@ -666,33 +666,26 @@ module VX_cache #(
                     amo_rw <= 0;
                 end else begin
                     case (curr_bank_amo_state)
-                    2'h0: begin
-                        if (is_amo_processing || (curr_bank_core_req_valid && curr_bank_core_req_is_amo)) begin
+                    1'b0: begin
+                        amo_valid <= 0;
+                        is_amo_processing <= 0;
+
+                        if (curr_bank_core_req_valid && curr_bank_core_req_is_amo && curr_bank_core_req_ready) begin
                             // LR and SC operations are AMO operations but should not trigger amo state machine transitions
                             if (curr_bank_core_req_op_mod != `INST_AMO_LR && curr_bank_core_req_op_mod != `INST_AMO_SC) begin
                                 is_amo_processing <= 1;
                                 amo_valid <= 0;
-                                curr_bank_amo_state <= 2'h1;
+                                curr_bank_amo_state <= 1'b1;
                             end
                         end
                     end
-                    2'h1: begin
-                        if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0] && curr_bank_core_rsp_valid) begin
+                    1'b1: begin
+                        if (curr_bank_amo_req_tag[0] == curr_bank_core_rsp_tag[0] && curr_bank_core_rsp_valid && (curr_bank_core_rsp_ready || curr_bank_amo_no_do_rsp)) begin
                             amo_valid <= 1;
                             amo_rw <= 1;
-
-                            // Move to the next state
-                            curr_bank_amo_state <= 2'h2;
+                            curr_bank_amo_state <= 1'b0;
                         end
-                    end
-                    2'h2: begin
-                        amo_valid <= 0;
-                        is_amo_processing <= 0;
-                        curr_bank_amo_state <= 2'h0;
-                        amo_rw <= 0;
-
-                    end    
-                    default:;
+                    end 
                     endcase
                 end
             end

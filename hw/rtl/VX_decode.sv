@@ -417,7 +417,7 @@ module VX_decode  #(
     `UNUSED_VAR (func2)
 
     // disable write to integer register r0
-    wire wb = use_rd && (is_amo || (| rd_r));
+    wire wb = use_rd && (| rd_r);
 
     assign decode_if.valid     = ifetch_rsp_if.valid;
     assign decode_if.wid       = ifetch_rsp_if.wid;
@@ -455,7 +455,7 @@ module VX_decode  #(
             dpi_trace("%d: core%0d-decode: wid=%0d, PC=%0h, ex=", $time, CORE_ID, decode_if.wid, decode_if.PC);
             trace_ex_type(decode_if.ex_type);
             dpi_trace(", op=");
-            trace_ex_op(decode_if.ex_type, decode_if.op_type, decode_if.op_mod);
+            trace_ex_op(decode_if.ex_type, decode_if.op_type, decode_if.op_mod, decode_if.is_amo);
             dpi_trace(", mod=%0d, tmask=%b, wb=%b, rd=%0d, rs1=%0d, rs2=%0d, rs3=%0d, imm=%0h, use_pc=%b, use_imm=%b, is_amo=%b\n", decode_if.op_mod, decode_if.tmask, decode_if.wb, decode_if.rd, decode_if.rs1, decode_if.rs2, decode_if.rs3, decode_if.imm, decode_if.use_PC, decode_if.use_imm, decode_if.is_amo);                        
         end
     end
